@@ -1,20 +1,44 @@
-import React from 'react';
+import React from 'react'
+import { Link } from 'react-router-dom'
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-100 text-gray-700 mt-12 border-t border-gray-300">
-      <div className="max-w-7xl mx-auto py-8 px-6 flex flex-col items-center text-center">
-        <h2 className="text-2xl font-bold text-blue-800">🩺 MeddiBuddy</h2>
-        <p className="text-sm italic text-gray-600 mt-1">
-          Your smart companion for understanding medicine :)
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
+    <footer className="bg-white border-t border-gray-200 mt-12">
+      <div className="max-w-7xl mx-auto py-10 px-6 flex flex-col items-center text-center gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-[#1E40AF]">MeddiBuddy</h2>
+          <p className="text-[16px] text-[#64748B] mt-1">
+            AI-powered medicine analysis
+          </p>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <Link
+            to="/about"
+            className="text-[16px] text-[#64748B] hover:text-[#1E40AF] transition-colors duration-200"
+          >
+            About
+          </Link>
+          <Link
+            to="/faq"
+            className="text-[16px] text-[#64748B] hover:text-[#1E40AF] transition-colors duration-200"
+          >
+            FAQ
+          </Link>
+          <Link
+            to="/feedback"
+            className="text-[16px] text-[#64748B] hover:text-[#1E40AF] transition-colors duration-200"
+          >
+            Feedback
+          </Link>
+        </div>
+
+        <p className="text-sm text-[#64748B]">
           &copy; {new Date().getFullYear()} MeddiBuddy. All rights reserved.
         </p>
-
       </div>
     </footer>
-  );
-};
+  )
+}
 
-export default Footer;
+export default Footer
