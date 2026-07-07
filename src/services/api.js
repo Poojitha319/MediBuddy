@@ -91,3 +91,25 @@ export function getAnalysis(id) {
 export function deleteAnalysis(id) {
   return apiRequest(`/api/analyses/${id}`, { method: 'DELETE' })
 }
+
+export function getReminders() {
+  return apiRequest('/api/reminders')
+}
+
+export function createReminder({ medicine_name, dose, times, language = 'en' }) {
+  return apiRequest('/api/reminders', {
+    method: 'POST',
+    body: { medicine_name, dose, times, language },
+  })
+}
+
+export function deleteReminder(id) {
+  return apiRequest(`/api/reminders/${id}`, { method: 'DELETE' })
+}
+
+export function askHealth(question, language = 'en') {
+  return apiRequest('/api/ask', {
+    method: 'POST',
+    body: { question, language },
+  })
+}

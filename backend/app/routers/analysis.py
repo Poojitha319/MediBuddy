@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.analysis import Analysis
 from app.dependencies import get_current_user
-from app.services.gemini import analyze_medicine_image
+from app.services.medicine_agent import run_medicine_analysis
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
@@ -26,25 +27,31 @@ async def analyze(
         raise HTTPException(status_code=400, detail="File size exceeds 10 MB")
 
     try:
-        result = await analyze_medicine_image(image_bytes, file.content_type, language)
+        result = await run_medicine_analysis(image_bytes, file.content_type, language)
     except Exception as e:
-        error_msg = str(e).lower()
-        if "429" in str(e) or "quota" in error_msg or "resource_exhausted" in error_msg or "resourceexhausted" in error_msg:
-            raise HTTPException(
-                status_code=429,
-                detail="Our AI is busy right now. Please wait 30-60 seconds and try again."
-            )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to analyze the image. Please try again."
-        )
+        if "429" in str(e) or "quota" in str(e).lower():
+            raise HTTPException(status_code=429, detail="Our AI is busy right now. Please wait 30-60 seconds and try again.")
+        raise HTTPException(status_code=500, detail="Failed to analyze the image. Please try again.")
+
+    if not result["is_medicine"]:
+        return JSONResponse(status_code=200, content={
+            "is_medicine": False,
+            "formatted_text": result["formatted_text"],
+            "plain_text": result["plain_text"],
+        })
 
     analysis = Analysis(
         user_id=current_user.id,
         image_mime_type=file.content_type,
         language=language,
-        raw_response=result["raw"],
-        parsed_report={"formatted_text": result["formatted_text"]},
+        raw_response=result["formatted_text"],
+        parsed_report={
+            "formatted_text": result["formatted_text"],
+            "drug_name": result["drug_name"],
+            "grounded": result["grounded"],
+            "source": result["source"],
+            "confidence": result["confidence"],
+        },
         plain_text=result["plain_text"],
     )
     db.add(analysis)
@@ -53,7 +60,12 @@ async def analyze(
 
     return {
         "id": analysis.id,
+        "is_medicine": True,
         "language": analysis.language,
+        "drug_name": result["drug_name"],
+        "grounded": result["grounded"],
+        "source": result["source"],
+        "confidence": result["confidence"],
         "formatted_text": result["formatted_text"],
         "plain_text": result["plain_text"],
         "parsed_report": analysis.parsed_report,

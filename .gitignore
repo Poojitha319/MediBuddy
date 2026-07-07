@@ -36,5 +36,9 @@ __pycache__/
 venv/
 backend/.env
 
+# Local dev databases (never commit real/seeded data)
+*.db
+*.sqlite3
+
 # IDE
 .idea/

@@ -82,6 +82,8 @@ const Navbar = () => {
           {user && navLink('/dashboard', 'Dashboard')}
           {navLink('/about', 'About')}
           {user && navLink('/history', 'History')}
+          {user && navLink('/reminders', 'Reminders')}
+          {user && navLink('/ask', 'Ask')}
           {navLink('/faq', 'FAQ')}
           {navLink('/feedback', 'Feedback')}
 
@@ -122,6 +124,8 @@ const Navbar = () => {
               {user && mobileNavLink('/dashboard', 'Dashboard')}
               {mobileNavLink('/about', 'About')}
               {user && mobileNavLink('/history', 'History')}
+              {user && mobileNavLink('/reminders', 'Reminders')}
+              {user && mobileNavLink('/ask', 'Ask')}
               {mobileNavLink('/faq', 'FAQ')}
               {mobileNavLink('/feedback', 'Feedback')}
               {user ? (
