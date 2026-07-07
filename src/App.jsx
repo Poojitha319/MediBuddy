@@ -9,6 +9,8 @@ import RegisterPage from './pages/RegisterPage'
 import MainPage from './pages/MainPage'
 import ReportPage from './pages/ReportPage'
 import HistoryPage from './pages/HistoryPage'
+import RemindersPage from './pages/RemindersPage'
+import AskPage from './pages/AskPage'
 import About from './pages/AboutPage'
 import Feedback from './pages/FeedbackPage'
 import FaqPage from './pages/FAQPage'
@@ -43,6 +45,22 @@ const App = () => {
           element={
             <ProtectedRoute>
               <HistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reminders"
+          element={
+            <ProtectedRoute>
+              <RemindersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ask"
+          element={
+            <ProtectedRoute>
+              <AskPage />
             </ProtectedRoute>
           }
         />

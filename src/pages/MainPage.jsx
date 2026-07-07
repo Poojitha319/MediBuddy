@@ -22,6 +22,7 @@ const MainPage = () => {
   const [dragActive, setDragActive] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [progressIndex, setProgressIndex] = useState(0)
+  const [language, setLanguage] = useState('en')
   const progressInterval = useRef(null)
   const navigate = useNavigate()
 
@@ -114,7 +115,11 @@ const MainPage = () => {
     setIsUploading(true)
     setError('')
     try {
-      const result = await analyzeMedicine(file)
+      const result = await analyzeMedicine(file, language)
+      if (!result.is_medicine) {
+        setError(result.formatted_text || "That doesn't look like a medicine. Please retake the photo in good light.")
+        return
+      }
       setAnalysisId(result.id)
       setIsAnalyzed(true)
       setToastMsg('Analysis complete! Redirecting to report...')
@@ -166,6 +171,24 @@ const MainPage = () => {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8"
         >
+          {/* Language Toggle */}
+          <div className="flex gap-3 mb-6">
+            <button
+              onClick={() => setLanguage('en')}
+              className={`flex-1 rounded-full text-base font-semibold transition-colors duration-150 ${language === 'en' ? 'bg-[#1E40AF] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              style={{ minHeight: '44px' }}
+            >
+              English
+            </button>
+            <button
+              onClick={() => setLanguage('te')}
+              className={`flex-1 rounded-full text-base font-semibold transition-colors duration-150 ${language === 'te' ? 'bg-[#1E40AF] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              style={{ minHeight: '44px' }}
+            >
+              తెలుగు
+            </button>
+          </div>
+
           {/* Upload Zone */}
           {!file ? (
             <label

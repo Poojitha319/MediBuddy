@@ -1,0 +1,31 @@
+# Render Blueprint — provisions the FastAPI backend + a free Postgres database.
+# Deploy: Render Dashboard → New → Blueprint → connect this repo.
+# You still set GEMINI_API_KEY and ALLOWED_ORIGINS in the dashboard (sync: false).
+databases:
+  - name: meddibuddy-db
+    plan: free
+    databaseName: meddibuddy
+    user: meddibuddy
+
+services:
+  - type: web
+    name: meddibuddy-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: meddibuddy-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true       # Render generates a strong secret
+      - key: GEMINI_API_KEY
+        sync: false               # set in dashboard — use a FRESH key
+      - key: ALLOWED_ORIGINS
+        sync: false               # set to your Vercel URL after frontend deploy

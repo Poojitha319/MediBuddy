@@ -1,10 +1,37 @@
-from unittest.mock import patch, AsyncMock
+import io
+import app.routers.analysis as analysis_router
 
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def _medicine_agent(drug_name="Paracetamol", formatted="**About:** Paracetamol",
+                    plain="About: Paracetamol"):
+    """Return a fake run_medicine_analysis coroutine that mimics a medicine hit."""
+    async def fake(image_bytes, mime_type, language):
+        return {
+            "is_medicine": True,
+            "drug_name": drug_name,
+            "confidence": 0.95,
+            "grounded": True,
+            "source": "openFDA",
+            "formatted_text": formatted,
+            "plain_text": plain,
+        }
+    return fake
+
+
+def _img():
+    return io.BytesIO(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+
+
+# ── auth guard ───────────────────────────────────────────────────────────────
 
 def test_analyze_no_auth(client):
     response = client.post("/api/analyze")
     assert response.status_code == 403 or response.status_code == 401
 
+
+# ── empty listing ─────────────────────────────────────────────────────────────
 
 def test_get_analyses_empty(client, auth_headers):
     response = client.get("/api/analyses", headers=auth_headers)
@@ -12,50 +39,45 @@ def test_get_analyses_empty(client, auth_headers):
     assert response.json() == []
 
 
-@patch("app.routers.analysis.analyze_medicine_image")
-def test_analyze_success(mock_gemini, client, auth_headers):
-    mock_gemini.return_value = {
-        "formatted_text": "**About:** Paracetamol",
-        "plain_text": "About: Paracetamol",
-        "raw": "raw response text",
-    }
+# ── successful medicine upload ────────────────────────────────────────────────
 
-    with open("tests/test_image.jpg", "wb") as f:
-        f.write(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+def test_analyze_success(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(analysis_router, "run_medicine_analysis",
+                        _medicine_agent(formatted="**About:** Paracetamol",
+                                        plain="About: Paracetamol"))
 
-    with open("tests/test_image.jpg", "rb") as f:
-        response = client.post(
-            "/api/analyze",
-            headers=auth_headers,
-            files={"file": ("medicine.jpg", f, "image/jpeg")},
-            data={"language": "en"},
-        )
+    response = client.post(
+        "/api/analyze",
+        headers=auth_headers,
+        files={"file": ("medicine.jpg", _img(), "image/jpeg")},
+        data={"language": "en"},
+    )
 
     assert response.status_code == 201
     data = response.json()
     assert "id" in data
+    assert data["is_medicine"] is True
     assert data["language"] == "en"
     assert "Paracetamol" in data["formatted_text"]
+    assert data["grounded"] is True
+    assert data["source"] == "openFDA"
+    assert data["drug_name"] == "Paracetamol"
 
 
-@patch("app.routers.analysis.analyze_medicine_image")
-def test_get_analyses_after_upload(mock_gemini, client, auth_headers):
-    mock_gemini.return_value = {
-        "formatted_text": "**About:** Ibuprofen",
-        "plain_text": "About: Ibuprofen",
-        "raw": "raw response",
-    }
+# ── listing after upload ──────────────────────────────────────────────────────
 
-    with open("tests/test_image.jpg", "wb") as f:
-        f.write(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+def test_get_analyses_after_upload(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(analysis_router, "run_medicine_analysis",
+                        _medicine_agent(drug_name="Ibuprofen",
+                                        formatted="**About:** Ibuprofen",
+                                        plain="About: Ibuprofen"))
 
-    with open("tests/test_image.jpg", "rb") as f:
-        client.post(
-            "/api/analyze",
-            headers=auth_headers,
-            files={"file": ("med.jpg", f, "image/jpeg")},
-            data={"language": "en"},
-        )
+    client.post(
+        "/api/analyze",
+        headers=auth_headers,
+        files={"file": ("med.jpg", _img(), "image/jpeg")},
+        data={"language": "en"},
+    )
 
     response = client.get("/api/analyses", headers=auth_headers)
     assert response.status_code == 200
@@ -63,24 +85,18 @@ def test_get_analyses_after_upload(mock_gemini, client, auth_headers):
     assert len(data) == 1
 
 
-@patch("app.routers.analysis.analyze_medicine_image")
-def test_delete_analysis(mock_gemini, client, auth_headers):
-    mock_gemini.return_value = {
-        "formatted_text": "text",
-        "plain_text": "text",
-        "raw": "raw",
-    }
+# ── delete flow ───────────────────────────────────────────────────────────────
 
-    with open("tests/test_image.jpg", "wb") as f:
-        f.write(b"\xff\xd8\xff\xe0" + b"\x00" * 100)
+def test_delete_analysis(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(analysis_router, "run_medicine_analysis",
+                        _medicine_agent(formatted="text", plain="text"))
 
-    with open("tests/test_image.jpg", "rb") as f:
-        create_resp = client.post(
-            "/api/analyze",
-            headers=auth_headers,
-            files={"file": ("med.jpg", f, "image/jpeg")},
-            data={"language": "en"},
-        )
+    create_resp = client.post(
+        "/api/analyze",
+        headers=auth_headers,
+        files={"file": ("med.jpg", _img(), "image/jpeg")},
+        data={"language": "en"},
+    )
 
     analysis_id = create_resp.json()["id"]
     delete_resp = client.delete(f"/api/analyses/{analysis_id}", headers=auth_headers)

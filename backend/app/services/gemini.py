@@ -1,4 +1,5 @@
 import base64
+import json
 import re
 import google.generativeai as genai
 from app.config import settings
@@ -98,4 +99,49 @@ async def analyze_medicine_image(image_bytes: bytes, mime_type: str, language: s
         "formatted_text": formatted_text,
         "plain_text": plain_text.strip(),
         "raw": raw_response,
+    }
+
+
+def build_structured_prompt(language: str = "en") -> str:
+    return f"""
+You are given an image. First decide if it shows a medicine package/strip/bottle.
+Respond with the report text in the user's language: **{language}**.
+
+Return ONLY a JSON object (optionally inside a ```json fence) with these keys:
+- "is_medicine": true/false
+- "drug_name": the primary active ingredient / generic name in English (for lookup), or ""
+- "confidence": a number 0.0-1.0 for how sure you are this is that medicine
+- "formatted_text": a markdown summary (about, how to take, warnings) for screen display
+- "plain_text": the same summary as plain text for a voice assistant
+
+If it is not a medicine, set is_medicine=false, drug_name="", confidence high, and
+put a short friendly note in formatted_text/plain_text.
+"""
+
+
+def parse_structured_response(raw: str) -> dict:
+    default = {
+        "is_medicine": False, "drug_name": "", "confidence": 0.0,
+        "formatted_text": "", "plain_text": "",
+    }
+    if not raw:
+        return default
+    text = raw.strip()
+    if "```" in text:
+        inner = text.split("```", 2)
+        if len(inner) >= 2:
+            block = inner[1]
+            if block.lstrip().lower().startswith("json"):
+                block = block.lstrip()[4:]
+            text = block.strip()
+    try:
+        data = json.loads(text)
+    except Exception:
+        return default
+    return {
+        "is_medicine": bool(data.get("is_medicine", False)),
+        "drug_name": str(data.get("drug_name", "") or ""),
+        "confidence": float(data.get("confidence", 0.0) or 0.0),
+        "formatted_text": str(data.get("formatted_text", "") or ""),
+        "plain_text": str(data.get("plain_text", "") or ""),
     }

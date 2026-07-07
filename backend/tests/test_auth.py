@@ -62,3 +62,19 @@ def test_get_me_authenticated(client, auth_headers):
 def test_get_me_no_token(client):
     response = client.get("/api/auth/me")
     assert response.status_code in (401, 403)
+
+
+def test_register_rejects_short_password(client):
+    response = client.post(
+        "/api/auth/register",
+        json={"name": "Shorty", "email": "shorty@example.com", "password": "short12"},  # 7 chars
+    )
+    assert response.status_code == 422
+
+
+def test_register_rejects_empty_name(client):
+    response = client.post(
+        "/api/auth/register",
+        json={"name": "", "email": "noname@example.com", "password": "strongpass123"},
+    )
+    assert response.status_code == 422
